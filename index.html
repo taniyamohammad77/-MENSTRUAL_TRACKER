@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f5f0">
+  <title>Period Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="site-header">
+    <a class="brand" href="#main-content" aria-label="Period Tracker home">
+      <span class="brand-mark" aria-hidden="true">p</span>
+      <span>period tracker</span>
+    </a>
+    <p class="privacy-note"><span aria-hidden="true">&#9679;</span> Your information stays in this browser</p>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">YOUR PERSONAL TRACKER</p>
+        <h1 id="page-title">A little space to keep track.</h1>
+        <p class="intro-copy">Record what you know, leave the rest blank. Your cycle length can be unknown.</p>
+      </div>
+      <div class="intro-art" aria-hidden="true"><span>&#10033;</span></div>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel calendar-panel" aria-labelledby="calendar-title">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">YOUR HISTORY</p>
+            <h2 id="calendar-title">Calendar</h2>
+          </div>
+          <div class="calendar-navigation">
+            <button id="previous-month" class="nav-button" type="button" aria-label="Previous month">&#8592;</button>
+            <label class="month-picker">
+              <span class="visually-hidden">Choose a month</span>
+              <input id="calendar-month" type="month" aria-label="Choose a month">
+            </label>
+            <button id="next-month" class="nav-button" type="button" aria-label="Next month">&#8594;</button>
+          </div>
+        </div>
+
+        <div id="calendar" class="calendar" role="grid" aria-label="Period calendar">
+          <div class="weekday" aria-hidden="true">Mon</div>
+          <div class="weekday" aria-hidden="true">Tue</div>
+          <div class="weekday" aria-hidden="true">Wed</div>
+          <div class="weekday" aria-hidden="true">Thu</div>
+          <div class="weekday" aria-hidden="true">Fri</div>
+          <div class="weekday" aria-hidden="true">Sat</div>
+          <div class="weekday" aria-hidden="true">Sun</div>
+          <p class="calendar-prompt">Loading calendar…</p>
+        </div>
+
+        <div class="legend" aria-label="Calendar status key">
+          <span><i class="legend-dot recorded" aria-hidden="true"></i> Period recorded</span>
+          <span><i class="legend-dot no-info" aria-hidden="true"></i> No information</span>
+        </div>
+
+        <div class="month-status">
+          <div class="month-status-copy">
+            <span id="status-icon" class="status-icon" aria-hidden="true">?</span>
+            <div>
+              <h3>Monthly status</h3>
+              <p id="current-status" aria-live="polite">Loading monthly status…</p>
+            </div>
+          </div>
+          <button id="edit-status" class="text-button" type="button">Edit status</button>
+        </div>
+      </section>
+
+      <aside class="panel entry-panel" aria-labelledby="entry-title">
+        <p class="eyebrow">YOUR RECORDS</p>
+        <h2 id="entry-title">Add a period</h2>
+        <p class="panel-intro">Enter the dates and duration you know. Each record can be different.</p>
+        <form id="period-form" novalidate>
+          <input id="period-id" name="id" type="hidden">
+          <div class="field">
+            <label for="start-date">Start date</label>
+            <input id="start-date" name="startDate" type="date" required>
+          </div>
+          <div class="field">
+            <label for="duration">Duration</label>
+            <div class="input-with-unit">
+              <input id="duration" name="durationDays" type="number" min="1" step="1" inputmode="numeric" aria-describedby="duration-help" required>
+              <span>days</span>
+            </div>
+            <p class="field-help" id="duration-help">Enter the number of days for this record.</p>
+          </div>
+          <div id="calculated-date" class="calculated-date" aria-live="polite">
+            <span class="calculated-icon" aria-hidden="true">&#8618;</span>
+            <span>Enter a start date and duration to calculate the end date.</span>
+          </div>
+          <p id="period-error" class="form-message error-message" role="alert"></p>
+          <button id="save-period" class="primary-button" type="submit">Save period</button>
+          <button id="cancel-edit" class="secondary-button cancel-button" type="button" hidden>Cancel edit</button>
+        </form>
+        <div id="period-list" class="records-list" aria-live="polite"></div>
+      </aside>
+    </div>
+
+    <section class="panel status-panel" aria-labelledby="status-title">
+      <div class="status-panel-heading">
+        <div>
+          <p class="eyebrow">MONTHLY NOTES</p>
+          <h2 id="status-title">Keep a note for a month</h2>
+          <p>Only you decide what a month means. No record does not mean a period did not arrive.</p>
+        </div>
+        <span class="status-sparkle" aria-hidden="true">✳</span>
+      </div>
+      <form id="status-form" class="status-form" novalidate>
+        <div class="field status-month-field">
+          <label for="status-month">Month</label>
+          <input id="status-month" name="statusMonth" type="month" required>
+        </div>
+        <fieldset class="status-options">
+          <legend>Status</legend>
+          <label class="radio-option"><input type="radio" name="monthlyStatus" value="period_recorded"><span>Period recorded</span></label>
+          <label class="radio-option"><input type="radio" name="monthlyStatus" value="period_did_not_arrive"><span>Period did not arrive</span></label>
+          <label class="radio-option"><input type="radio" name="monthlyStatus" value="not_sure"><span>Not sure</span></label>
+          <label class="radio-option"><input type="radio" name="monthlyStatus" value="no_information_recorded"><span>No information recorded</span></label>
+        </fieldset>
+        <p id="status-conflict" class="form-message conflict-message" role="status"></p>
+        <p id="status-error" class="form-message error-message" role="alert"></p>
+        <button class="secondary-button" type="submit">Save monthly status</button>
+      </form>
+    </section>
+
+    <footer class="page-footer">
+      <p>This is a personal record-keeping tool. It does not make predictions or medical assessments.</p>
+    </footer>
+    <div id="app-message" class="app-message" role="status" aria-live="polite"></div>
+    <div id="storage-error" class="storage-error" role="alert" hidden></div>
+  </main>
+</body>
+</html>
