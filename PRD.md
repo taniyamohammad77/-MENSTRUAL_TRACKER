@@ -30,7 +30,7 @@ An individual who wants to record their own period dates and optionally annotate
 ## 6. Core features
 
 - Month-by-month calendar navigation.
-- Period record creation with a start date and required user-entered duration.
+- Period record creation with a start date and optional user-entered duration.
 - Display of the end date calculated only from that record's entered duration.
 - Editing and deleting period records.
 - Explicit monthly status selection and later editing.
@@ -38,9 +38,9 @@ An individual who wants to record their own period dates and optionally annotate
 
 ## 7. Period recording
 
-Each period record has a start date and duration supplied by the user. The duration is required for a saved record; there is no preselected duration. The user may enter a different duration for every record and may edit it later. The application must not assume that periods last five days, even if the user says that five days is usual.
+Each period record has a start date and an optional duration supplied by the user. Duration may be unknown and left blank; there is no preselected duration. The user may enter a different duration for every record and may edit it later. The application must not assume that periods last five days, even if the user says that five days is usual.
 
-The record should present its calculated end date. The end date is derived solely from the entered start date and duration; it is not a prediction. Records can be edited or deleted by the user.
+When duration is known, the record presents its calculated end date, derived solely from the entered start date and duration. When duration is unknown, no end date is calculated and only the start date is marked. Records can be edited or deleted by the user.
 
 ## 8. Monthly tracking
 
@@ -60,7 +60,7 @@ The user can change a month's status later, including returning it to “No info
 ## 10. Calendar behavior
 
 - Show dates in a navigable month grid with controls for previous and next months and a way to identify the displayed month and year.
-- Mark recorded period dates using the start date and calculated duration range.
+- Mark recorded period dates using the start date and, when known, the calculated duration range. With unknown duration, mark only the start date.
 - Present monthly status in text as well as any visual styling.
 - Do not display predicted dates.
 - Support month and year boundaries, including leap years.
@@ -72,7 +72,7 @@ Accept a valid calendar date entered by the user. Reject blank, malformed, or im
 
 ## 12. Period duration behavior
 
-Duration is required and must be a positive whole number of calendar days that the interface can represent safely. There is no default duration, including five days. The user enters or edits each record's duration. For a duration of N days, the inclusive end date is the start date plus N−1 calendar days. Invalid, blank, fractional, zero, or negative durations cannot be saved. Do not impose an unstated medical maximum.
+Duration may be unknown and blank. When provided, it must be a positive whole number of calendar days that the interface can represent safely. There is no default duration, including five days. For a known duration of N days, the inclusive end date is the start date plus N−1 calendar days. Unknown duration has no end date and marks only the start date. Invalid, fractional, zero, or negative durations cannot be saved. Do not impose an unstated medical maximum.
 
 ## 13. Cycle-length behavior
 
