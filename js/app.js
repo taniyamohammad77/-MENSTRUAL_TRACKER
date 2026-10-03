@@ -18,7 +18,11 @@
     nextMonth: document.getElementById('next-month'),
     currentStatus: document.getElementById('current-status'),
     statusIcon: document.getElementById('status-icon'),
-    editStatus: document.getElementById('edit-status'),
+    monthStatus: document.getElementById('monthly-status-card'),
+    statusForm: document.getElementById('status-form'),
+    statusMonth: document.getElementById('status-month'),
+    statusConflict: document.getElementById('status-conflict'),
+    statusError: document.getElementById('status-error'),
     periodForm: document.getElementById('period-form'),
     periodId: document.getElementById('period-id'),
     startDate: document.getElementById('start-date'),
@@ -28,16 +32,21 @@
     savePeriod: document.getElementById('save-period'),
     cancelEdit: document.getElementById('cancel-edit'),
     periodList: document.getElementById('period-list'),
-    statusForm: document.getElementById('status-form'),
-    statusMonth: document.getElementById('status-month'),
-    statusConflict: document.getElementById('status-conflict'),
-    statusError: document.getElementById('status-error'),
+    summaryYear: document.getElementById('summary-year'),
+    trackedMonths: document.getElementById('tracked-months'),
+    arrivedMonths: document.getElementById('arrived-months'),
+    missedMonths: document.getElementById('missed-months'),
+    unsureMonths: document.getElementById('unsure-months'),
+    unknownMonths: document.getElementById('unknown-months'),
+    yearChart: document.getElementById('year-chart'),
+    monthlyPattern: document.getElementById('monthly-pattern'),
     appMessage: document.getElementById('app-message'),
     storageError: document.getElementById('storage-error')
   };
 
   let data = emptyData();
   let selectedMonth = '';
+  let selectedSummaryYear = '';
   let safeMode = false;
 
   function emptyData() {
@@ -98,8 +107,8 @@
     for (const period of candidate.periods) {
       if (!period || typeof period !== 'object' || typeof period.id !== 'string' || !period.id || ids.has(period.id)) return 'A saved period record has an invalid or duplicate ID.';
       if (!parseDate(period.startDate)) return 'A saved period record has an invalid start date.';
-      if (!Number.isSafeInteger(period.durationDays) || period.durationDays < 1) return 'A saved period record has an invalid duration.';
-      if (!calculateEndDate(period.startDate, period.durationDays)) return 'A saved period record has an end date outside the supported calendar range.';
+      if (period.durationDays !== null && (!Number.isSafeInteger(period.durationDays) || period.durationDays < 1)) return 'A saved period record has an invalid duration.';
+      if (period.durationDays !== null && !calculateEndDate(period.startDate, period.durationDays)) return 'A saved period record has an end date outside the supported calendar range.';
       ids.add(period.id);
     }
 
@@ -181,7 +190,7 @@
 
   function datesInSelectedMonth() {
     return data.periods.filter(function (period) {
-      const end = calculateEndDate(period.startDate, period.durationDays);
+      const end = calculateEndDate(period.startDate, period.durationDays) || period.startDate;
       return period.startDate.slice(0, 7) <= selectedMonth && end.slice(0, 7) >= selectedMonth;
     });
   }
@@ -193,7 +202,7 @@
     const daysInMonth = makeUtcDate(monthYear, monthNumber + 1, 0).getUTCDate();
     datesInSelectedMonth().forEach(function (period) {
       const start = parseDate(period.startDate);
-      const end = parseDate(calculateEndDate(period.startDate, period.durationDays));
+      const end = parseDate(calculateEndDate(period.startDate, period.durationDays) || period.startDate);
       for (let day = 1; day <= daysInMonth; day += 1) {
         const date = makeUtcDate(monthYear, monthNumber, day);
         if (date >= start && date <= end) marked.add(dateString(date));
@@ -208,6 +217,8 @@
     const firstWeekday = (makeUtcDate(year, month, 1).getUTCDay() + 6) % 7;
     const daysInMonth = makeUtcDate(year, month + 1, 0).getUTCDate();
     const markedDays = recordsByDay();
+    const today = new Date();
+    const todayDate = String(today.getFullYear()).padStart(4, '0') + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     const weekdayRow = document.createElement('div');
     weekdayRow.className = 'calendar-weekday-row';
     weekdayRow.setAttribute('role', 'row');
@@ -235,6 +246,10 @@
           const isoDate = selectedMonth + '-' + String(day).padStart(2, '0');
           cell.textContent = String(day);
           cell.setAttribute('aria-label', formatDate(isoDate) + (markedDays.has(isoDate) ? ', period recorded' : ', no period record'));
+          if (isoDate === todayDate) {
+            cell.classList.add('today-day');
+            cell.setAttribute('aria-current', 'date');
+          }
           if (markedDays.has(isoDate)) {
             cell.classList.add('period-day');
             cell.setAttribute('title', 'Period recorded');
@@ -259,7 +274,7 @@
 
   function datesInMonth(month) {
     return data.periods.filter(function (period) {
-      const end = calculateEndDate(period.startDate, period.durationDays);
+      const end = calculateEndDate(period.startDate, period.durationDays) || period.startDate;
       return period.startDate.slice(0, 7) <= month && end.slice(0, 7) >= month;
     });
   }
@@ -269,15 +284,15 @@
     const status = effectiveStatus(selectedMonth);
     elements.currentStatus.textContent = monthLabel(selectedMonth) + ': ' + STATUS_LABELS[status];
     elements.statusIcon.textContent = status === 'period_recorded' ? '✓' : status === 'not_sure' ? '?' : '·';
+    elements.monthStatus.setAttribute('data-status', status);
     elements.statusMonth.value = selectedMonth;
     const radioValue = explicit || status;
     const selectedRadio = elements.statusForm.querySelector('input[name="monthlyStatus"][value="' + radioValue + '"]');
     if (selectedRadio) selectedRadio.checked = true;
-
     const hasRecords = datesInMonth(selectedMonth).length > 0;
     const isMismatch = Boolean(explicit && ((hasRecords && explicit !== 'period_recorded') || (!hasRecords && explicit === 'period_recorded')));
     elements.statusConflict.textContent = isMismatch
-      ? 'This month has period records and the saved status is “' + STATUS_LABELS[explicit] + '”. Both are kept. Edit the status or records if this is not what you intended.'
+      ? 'This month has period records and the saved status is “' + STATUS_LABELS[explicit] + '”. Both are kept. Review the record and saved status if this is not what you intended.'
       : '';
   }
 
@@ -288,10 +303,13 @@
     details.className = 'record-details';
     const title = document.createElement('p');
     title.className = 'record-title';
-    title.textContent = formatDate(period.startDate) + ' – ' + formatDate(calculateEndDate(period.startDate, period.durationDays));
+    const endDate = calculateEndDate(period.startDate, period.durationDays);
+    title.textContent = endDate ? formatDate(period.startDate) + ' – ' + formatDate(endDate) : formatDate(period.startDate);
     const duration = document.createElement('p');
     duration.className = 'record-duration';
-    duration.textContent = 'Duration: ' + period.durationDays + ' ' + (period.durationDays === 1 ? 'day' : 'days');
+    duration.textContent = period.durationDays === null
+      ? 'Duration unknown'
+      : 'Duration: ' + period.durationDays + ' ' + (period.durationDays === 1 ? 'day' : 'days');
     details.append(title, duration);
 
     const actions = document.createElement('div');
@@ -336,10 +354,71 @@
     records.forEach(function (period) { elements.periodList.appendChild(createRecordCard(period)); });
   }
 
+  function renderYearlyOverview() {
+    const years = new Set([String(new Date().getFullYear())]);
+    data.periods.forEach(function (period) {
+      const firstYear = Number(period.startDate.slice(0, 4));
+      const endDate = calculateEndDate(period.startDate, period.durationDays) || period.startDate;
+      const lastYear = Number(endDate.slice(0, 4));
+      for (let year = firstYear; year <= lastYear; year += 1) years.add(String(year).padStart(4, '0'));
+    });
+    Object.keys(data.monthlyStatuses).forEach(function (month) { years.add(month.slice(0, 4)); });
+    const orderedYears = Array.from(years).sort();
+    const currentYear = selectedSummaryYear || selectedMonth.slice(0, 4);
+    elements.summaryYear.replaceChildren();
+    orderedYears.forEach(function (year) {
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year;
+      elements.summaryYear.appendChild(option);
+    });
+    elements.summaryYear.value = orderedYears.includes(currentYear) ? currentYear : orderedYears[orderedYears.length - 1];
+    const year = elements.summaryYear.value;
+    selectedSummaryYear = year;
+    const counts = { period_recorded: 0, period_did_not_arrive: 0, not_sure: 0, no_information_recorded: 0 };
+    const pattern = [];
+    for (let monthNumber = 1; monthNumber <= 12; monthNumber += 1) {
+      const month = year + '-' + String(monthNumber).padStart(2, '0');
+      const status = effectiveStatus(month);
+      counts[status] += 1;
+      pattern.push({ month: month, status: status });
+    }
+    const tracked = 12 - counts.no_information_recorded;
+    elements.trackedMonths.textContent = String(tracked);
+    elements.arrivedMonths.textContent = String(counts.period_recorded);
+    elements.missedMonths.textContent = String(counts.period_did_not_arrive);
+    elements.unsureMonths.textContent = String(counts.not_sure);
+    elements.unknownMonths.textContent = String(counts.no_information_recorded);
+
+    const decided = counts.period_recorded + counts.period_did_not_arrive;
+    const arrivedPercent = decided ? Math.round(counts.period_recorded / decided * 100) : 0;
+    elements.yearChart.style.setProperty('--arrived-share', arrivedPercent + '%');
+    elements.yearChart.classList.toggle('has-data', decided > 0);
+    elements.yearChart.setAttribute('aria-label', decided
+      ? 'Among ' + decided + ' months marked arrived or did not arrive, ' + counts.period_recorded + ' period arrived and ' + counts.period_did_not_arrive + " period didn't arrive"
+      : 'No arrived or did not arrive months recorded');
+    elements.monthlyPattern.replaceChildren();
+    pattern.forEach(function (item) {
+      const cell = document.createElement('div');
+      cell.className = 'month-pattern-item status-' + item.status;
+      const name = document.createElement('span');
+      name.className = 'pattern-month-name';
+      name.textContent = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' }).format(makeUtcDate(Number(year), Number(item.month.slice(5, 7)), 1));
+      const mark = document.createElement('span');
+      mark.className = 'pattern-month-mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = item.status === 'period_recorded' ? '✓' : item.status === 'period_did_not_arrive' ? '×' : item.status === 'not_sure' ? '?' : '·';
+      cell.setAttribute('aria-label', name.textContent + ': ' + STATUS_LABELS[item.status]);
+      cell.append(name, mark);
+      elements.monthlyPattern.appendChild(cell);
+    });
+  }
+
   function render() {
     renderCalendar();
     renderStatus();
     renderPeriods();
+    renderYearlyOverview();
   }
 
   function updateDatePreview() {
@@ -347,9 +426,13 @@
     const durationText = elements.duration.value;
     const duration = Number(durationText);
     const end = date && durationText && Number.isSafeInteger(duration) && duration > 0 ? calculateEndDate(date, duration) : null;
-    const text = end
-      ? 'Calculated end date: ' + formatDate(end) + ' (inclusive).'
-      : 'Enter a valid start date and positive whole-number duration to calculate the end date.';
+    let text;
+    if (!date) text = 'Enter a start date. Leave duration blank if it is unknown.';
+    else if (!parseDate(date)) text = 'Enter a valid start date.';
+    else if (!durationText) text = 'Duration is unknown; no end date will be calculated.';
+    else if (!Number.isSafeInteger(duration) || duration < 1) text = 'Enter a positive whole number of days, or leave duration blank if unknown.';
+    else if (!end) text = 'That duration goes beyond the supported calendar date range.';
+    else text = 'Calculated end date: ' + formatDate(end) + ' (inclusive).';
     elements.calculatedDate.lastElementChild.textContent = text;
   }
 
@@ -365,20 +448,20 @@
     if (safeMode) return;
     const startDate = elements.startDate.value;
     const durationRaw = elements.duration.value;
-    const duration = Number(durationRaw);
+    const duration = durationRaw === '' ? null : Number(durationRaw);
     if (!parseDate(startDate)) {
       elements.periodError.textContent = 'Enter a valid start date.';
       elements.startDate.setAttribute('aria-invalid', 'true');
       elements.startDate.focus();
       return;
     }
-    if (!durationRaw || !Number.isSafeInteger(duration) || duration < 1) {
-      elements.periodError.textContent = 'Enter a positive whole number of days.';
+    if (duration !== null && (!Number.isSafeInteger(duration) || duration < 1)) {
+      elements.periodError.textContent = 'Enter a positive whole number of days, or leave duration blank if unknown.';
       elements.duration.setAttribute('aria-invalid', 'true');
       elements.duration.focus();
       return;
     }
-    if (!calculateEndDate(startDate, duration)) {
+    if (duration !== null && !calculateEndDate(startDate, duration)) {
       elements.periodError.textContent = 'That duration goes beyond the supported calendar date range. Reduce the duration.';
       elements.duration.setAttribute('aria-invalid', 'true');
       elements.duration.focus();
@@ -430,7 +513,7 @@
   function beginEdit(period) {
     elements.periodId.value = period.id;
     elements.startDate.value = period.startDate;
-    elements.duration.value = String(period.durationDays);
+    elements.duration.value = period.durationDays === null ? '' : String(period.durationDays);
     elements.savePeriod.textContent = 'Update period';
     elements.cancelEdit.hidden = false;
     clearPeriodError();
@@ -496,15 +579,10 @@
   });
   elements.previousMonth.addEventListener('click', function () { shiftMonth(-1); });
   elements.nextMonth.addEventListener('click', function () { shiftMonth(1); });
-  elements.editStatus.addEventListener('click', function () {
-    elements.statusMonth.value = selectedMonth;
-    elements.statusMonth.focus();
-    document.getElementById('status-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
+  elements.statusForm.addEventListener('submit', submitStatus);
   elements.startDate.addEventListener('input', updateDatePreview);
   elements.duration.addEventListener('input', updateDatePreview);
   elements.periodForm.addEventListener('submit', submitPeriod);
-  elements.statusForm.addEventListener('submit', submitStatus);
   elements.cancelEdit.addEventListener('click', resetPeriodForm);
   elements.statusMonth.addEventListener('change', function () {
     const month = elements.statusMonth.value;
@@ -514,7 +592,10 @@
     const radio = elements.statusForm.querySelector('input[name="monthlyStatus"][value="' + current + '"]');
     if (radio) radio.checked = true;
   });
-
+  elements.summaryYear.addEventListener('change', function () {
+    selectedSummaryYear = elements.summaryYear.value;
+    renderYearlyOverview();
+  });
   const today = new Date();
   selectedMonth = String(today.getFullYear()).padStart(4, '0') + '-' + String(today.getMonth() + 1).padStart(2, '0');
   readStoredData();
