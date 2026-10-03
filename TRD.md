@@ -58,7 +58,7 @@ Use a versioned JSON object as the value for one application storage key. Dates 
 }
 ```
 
-The example values illustrate shape only; they are not defaults or sample user data. `durationDays` is required per record, with no prefilled default. The end date is calculated when needed as start date plus duration minus one day and is not independently persisted. Monthly status values are `period_recorded`, `period_did_not_arrive`, or `not_sure`; absence of a key means `no_information_recorded`. A `period_recorded` status can also be reflected by actual period records in that month. If they conflict, retain both pieces of information and surface the mismatch for resolution rather than silently overriding data.
+The example values illustrate shape only; they are not defaults or sample user data. `durationDays` is a positive integer when known and `null` when unknown; it has no prefilled default. The end date is calculated only when duration is known and is not independently persisted. An unknown-duration record marks its start date only. Monthly status values are `period_recorded`, `period_did_not_arrive`, or `not_sure`; absence of a key means `no_information_recorded`. A `period_recorded` status can also be reflected by actual period records in that month. If they conflict, retain both pieces of information and surface the mismatch for resolution rather than silently overriding data.
 
 `cycleLengthDays` is optional and `null` when unknown. No application behavior may assume or derive a value. Because initial functionality does not need cycle length, omit the setting entirely or keep it null; never write an assumed value.
 
@@ -76,8 +76,8 @@ The example values illustrate shape only; they are not defaults or sample user d
 
 - **Format:** Store dates as `YYYY-MM-DD` calendar dates. Avoid parsing date-only strings through local timezone-sensitive timestamp paths.
 - **Start date:** Require an actual valid Gregorian calendar date. Validate year, month, and day round-trip; reject impossible dates.
-- **Duration:** Require a positive whole number within the supported numeric and date implementation range. Do not impose a medical maximum.
-- **End date:** Inclusive end = start date plus (`durationDays - 1`) calendar days. Calculate using calendar arithmetic and validate the resulting date. Do not use elapsed milliseconds across daylight-saving boundaries.
+- **Duration:** `null` means unknown. When present, require a positive whole number within the supported numeric and date implementation range. Do not impose a medical maximum.
+- **End date:** For known duration, inclusive end = start date plus (`durationDays - 1`) calendar days. Calculate using calendar arithmetic and validate the resulting date. For unknown duration, do not calculate an end date; mark only the start date. Do not use elapsed milliseconds across daylight-saving boundaries.
 - **Month/year:** Use integer year/month calendar operations; navigation across December/January must be correct.
 - **Leap years:** Follow Gregorian leap-year rules, including century exceptions.
 - **Invalid dates:** Reject malformed and impossible input before saving. Existing invalid stored entries are errors requiring user-visible recovery; do not silently coerce them.
@@ -103,7 +103,7 @@ State transitions must not mutate persistent data until the user submits a valid
 
 ## 10. Validation
 
-Validate required fields, real calendar dates, positive integer duration, supported storage schema, unique record IDs, and supported monthly status values. Validation is technical and must not impose medical rules, cycle regularity assumptions, or unsupported duration limits. Escape or safely render user-controlled text if any is added in future scope.
+Validate required start dates, real calendar dates, positive integer duration when supplied, supported storage schema, unique record IDs, and supported monthly status values. Validation is technical and must not impose medical rules, cycle regularity assumptions, or unsupported duration limits. Escape or safely render user-controlled text if any is added in future scope.
 
 ## 11. Responsive behavior
 
@@ -137,6 +137,7 @@ Before release, perform manual checks and focused JavaScript tests for:
 
 - Date parsing and validation, impossible dates, leap days, and year boundaries.
 - Positive integer duration and inclusive end-date calculation, including multi-month/year boundaries.
+- Unknown duration saves with no calculated end date and marks only its start date.
 - Each monthly status, neutral empty months, status edits, status clearing, and record/status inconsistency.
 - Missing, valid, malformed, unsupported, and inaccessible `localStorage`; save/update/delete persistence.
 - Adding, editing, and deleting records, including preservation of unrelated data.
