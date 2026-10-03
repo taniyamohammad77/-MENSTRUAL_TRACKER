@@ -6,8 +6,8 @@ Period Tracker is planned as a private frontend-only tool for recording period s
 
 ## Confirmed requirements
 
-- Store period entries with a start date and required, user-entered duration.
-- Calculate inclusive end dates only from that entry's duration.
+- Store period entries with a start date and optional, user-entered duration.
+- Calculate inclusive end dates only when that entry has a known duration; unknown duration marks only its start date.
 - Support editing and deleting period records.
 - Support monthly statuses: period recorded, period did not arrive, not sure, and no information recorded.
 - Allow a month's status to be edited later.
@@ -98,3 +98,9 @@ Status: COMPLETE — awaiting review/approval to proceed
 - Check remaining documented edge cases: storage read exceptions, unsupported schema, year boundaries/leap-year rules, overlapping records, and saved-data reload.
 - Perform browser-based responsive and keyboard/accessibility review if a browser is available.
 - Complete the Phase 3 verification report and update this log. Do not start another phase without explicit approval.
+
+## Unknown duration support — 2026-10-03
+
+- Duration may be left blank; saved records store `durationDays: null` without changing the storage schema version. Known-duration records retain their existing format and behavior.
+- Unknown-duration records have no calculated end date and mark only their start date. Monthly record/status conflicts continue to be surfaced.
+- No personal historical dates are embedded in application files or used as initial data.
